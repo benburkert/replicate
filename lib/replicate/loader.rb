@@ -71,6 +71,9 @@ module Replicate
     # Returns the new object instance.
     def load(type, id, attributes)
       model_class = constantize(type)
+
+      return if model_class.nil?
+
       translate_ids type, id, attributes
       begin
         new_id, instance = model_class.load_replicant(type, id, attributes)
@@ -123,6 +126,15 @@ module Replicate
       end
     end
 
+    # Silently ignore missing replication types instead of raising an
+    # uninitialized constant error. Allows for replication between mismatched
+    # object graphs.
+    def ignore_missing!
+      @ignore = true
+    end
+
+    def ignore_missing? ; @ignore ; end
+
     # Turn a string into an object by traversing constants. Identical to
     # ActiveSupport's String#constantize implementation.
     if Module.method(:const_get).arity == 1
@@ -132,7 +144,7 @@ module Replicate
           if namespace.const_defined?(name)
             namespace.const_get(name)
           else
-            namespace.const_missing(name)
+            namespace.const_missing(name) unless ignore_missing?
           end
         end
       end
@@ -143,7 +155,7 @@ module Replicate
           if namespace.const_defined?(name, false)
             namespace.const_get(name)
           else
-            namespace.const_missing(name)
+            namespace.const_missing(name) unless ignore_missing?
           end
         end
       end

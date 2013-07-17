@@ -90,4 +90,40 @@ class LoaderTest < Test::Unit::TestCase
     assert_equal 11, objects.size
     assert_equal 10, objects.last.related.size
   end
+
+  def test_ignoring_a_missing_type
+    dumper = Replicate::Dumper.new
+
+    objects = []
+    dumper.listen { |type, id, attrs, obj| objects << [type, id, attrs, obj] }
+
+    with_ghost_class do |klass|
+      dumper.dump(klass.new)
+    end
+
+    begin
+      objects.each { |type, id, attrs, obj| @loader.feed type, id, attrs }
+
+      assert_fail "NameError unexpectedly ignored"
+    rescue NameError
+    end
+
+    @loader.ignore_missing!
+
+    objects.each { |type, id, attrs, obj| @loader.feed type, id, attrs }
+  end
+
+  def with_ghost_class
+    eval <<-RUBY
+      class ::Ghost
+        def dump_replicant(dumper)
+          dumper.write self.class, 3, {}, self
+        end
+      end
+    RUBY
+
+    yield Ghost
+  ensure
+    Object.send(:remove_const, :Ghost)
+  end
 end
