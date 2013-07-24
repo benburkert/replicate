@@ -146,10 +146,16 @@ module Replicate
         string.split('::').inject ::Object do |namespace, name|
           if namespace.const_defined?(name)
             namespace.const_get(name)
-          elsif ignore_missing?
-            warn "ignoring missing type #{name}"
           else
-            namespace.const_missing(name)
+            begin
+              namespace.const_missing(name)
+            rescue NameError => e
+              if ignore_missing?
+                warn "ignoring missing type #{name}"
+              else
+                raise e
+              end
+            end
           end
         end
       end
@@ -159,10 +165,16 @@ module Replicate
         string.split('::').inject ::Object do |namespace, name|
           if namespace.const_defined?(name, false)
             namespace.const_get(name)
-          elsif ignore_missing?
-            warn "ignoring missing type #{name}"
           else
-            namespace.const_missing(name)
+            begin
+              namespace.const_missing(name)
+            rescue NameError => e
+              if ignore_missing?
+                warn "ignoring missing type #{name}"
+              else
+                raise e
+              end
+            end
           end
         end
       end
